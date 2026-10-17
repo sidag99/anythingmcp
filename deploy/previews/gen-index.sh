@@ -19,4 +19,4 @@ mkdir -p "$(dirname "$OUT")"
   printf ']}\n'
 } > "$OUT.tmp"
 python3 -m json.tool "$OUT.tmp" >/dev/null
-mv "$OUT.tmp" "$OUT"
+chmod 644 "$OUT.tmp"; mv "$OUT.tmp" "$OUT"
