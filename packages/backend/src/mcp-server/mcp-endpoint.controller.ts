@@ -78,6 +78,14 @@ import {
   planServerResources,
 } from './mcp-resources';
 import { jsonSchemaToZodShape, stripEnvVarParams } from './tool-schema.util';
+import { SandboxService } from '../sandbox/sandbox.service';
+import { SandboxScriptsService } from '../sandbox/sandbox-scripts.service';
+import {
+  SANDBOX_RUN_TOOL,
+  buildSandboxToolEntries,
+} from '../sandbox/sandbox-tools';
+import { isSandboxEnabled } from '../sandbox/limits';
+import { toSandboxTools, visibleServerTools } from './visible-tools';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
@@ -179,6 +187,13 @@ interface ToolSetParams {
   /** Optional text appended as a trailing content block to every successful
    *  tool result (used by the public demo to say where the answer came from). */
   resultFooter?: string;
+  /**
+   * Organization that owns the MCP server. Setting it is what offers the
+   * sandbox (code mode) tools, so only the authenticated per-server surface
+   * sets it: the anonymous demo server and any future surface leave it unset
+   * and never get a code-execution tool by omission.
+   */
+  sandboxOrganizationId?: string;
 }
 
 interface InvocationContext {
@@ -218,6 +233,27 @@ export class McpEndpointController {
   /** Last time a duplicate tool name was logged, per `server:name`. */
   private readonly duplicateWarnedAt = new Map<string, number>();
 
+  /**
+   * The tools a caller may use on a server at this moment, for a sandbox run.
+   * Mirrors the selection a request makes (assigned connectors, then the role
+   * allow-list for the server's organization), read fresh.
+   */
+  private async currentSandboxTools(
+    serverId: string,
+    serverOrganizationId: string,
+    userId: string | undefined,
+  ) {
+    const [connectorIds, allowedToolIds] = await Promise.all([
+      this.mcpServersService.getConnectorIds(serverId),
+      userId
+        ? this.rolesService.getAllowedToolIds(userId, serverOrganizationId)
+        : Promise.resolve(null as string[] | null),
+    ]);
+    const assigned = new Set(connectorIds);
+    const serverTools = this.toolRegistry.getAllTools().filter((t) => assigned.has(t.connectorId));
+    return toSandboxTools(visibleServerTools(serverTools, allowedToolIds));
+  }
+
   private shouldWarnDuplicate(key: string, now = Date.now()): boolean {
     const last = this.duplicateWarnedAt.get(key);
     if (last !== undefined && now - last < 60 * 60 * 1000) return false;
@@ -237,6 +273,9 @@ export class McpEndpointController {
     private readonly kgSkills: KgSkillService,
     @Optional() private readonly sharedSetup?: SharedSetupRegistry,
     @Optional() private readonly codebound?: CodeboundRegistry,
+    // Optional so specs that construct the controller by hand keep compiling.
+    @Optional() private readonly sandbox?: SandboxService,
+    @Optional() private readonly sandboxScripts?: SandboxScriptsService,
   ) {}
 
   private codeboundConnection(user: any, endpointServerId?: string, organizationId?: string): CodeboundConnection | undefined {
@@ -1147,6 +1186,7 @@ export class McpEndpointController {
       kgEnabled,
       invocationContext,
       codeboundConnection: this.codeboundConnection(user, serverId, mcpServerConfig.organizationId),
+      sandboxOrganizationId: mcpServerConfig.organizationId,
     };
 
     // Register this server's tool surface onto the per-request McpServer.
@@ -1499,6 +1539,7 @@ export class McpEndpointController {
         kgEnabled,
         invocationContext,
         codeboundConnection: this.codeboundConnection(user, serverId, serverOrganizationId),
+        sandboxOrganizationId: serverOrganizationId,
       });
       const signature = this.aggregateSig(entries);
       if (signature === session.signature) return; // nothing changed here
@@ -1551,24 +1592,22 @@ export class McpEndpointController {
       ? codeboundEntries(provider, params.codeboundConnection) : [];
     const registeredNames = new Set<string>(entries.map((entry) => entry.name));
 
-    for (const tool of serverTools) {
-      // A connector that is not set up yet would only produce errors.
-      if (!isListable(tool)) continue;
-      // Skip tools not allowed by role
-      if (allowedToolIds !== null && !allowedToolIds.includes(tool.id)) continue;
-      // Dedupe by tool name. Two connectors can expose the same name (same
-      // connector assigned twice, or two configs of one provider); the SDK
-      // throws on the second registration, which would 500 the whole request.
-      if (registeredNames.has(tool.name)) {
-        // Once an hour per server and name: the tool set is planned on every
-        // request, and one polling client turned this into 1,880 lines in 16 h.
-        if (this.shouldWarnDuplicate(`${invocationContext.mcpServerId}:${tool.name}`)) {
-          this.logger.warn(
-            `Duplicate tool name "${tool.name}" on server ${invocationContext.mcpServerId} — skipping the extra copy (check for duplicate connector assignments).`,
-          );
-        }
-        continue;
+    // Connector set up, allowed by role, first of each name. Two connectors can
+    // expose the same name (same connector assigned twice, or two configs of one
+    // provider); the SDK throws on the second registration, which would 500 the
+    // whole request. The sandbox REST API selects with the same function, so a
+    // script can only reach tools that this list shows the caller.
+    const visibleTools = visibleServerTools(serverTools, allowedToolIds, (tool) => {
+      // Once an hour per server and name: the tool set is planned on every
+      // request, and one polling client turned this into 1,880 lines in 16 h.
+      if (this.shouldWarnDuplicate(`${invocationContext.mcpServerId}:${tool.name}`)) {
+        this.logger.warn(
+          `Duplicate tool name "${tool.name}" on server ${invocationContext.mcpServerId} — skipping the extra copy (check for duplicate connector assignments).`,
+        );
       }
+    });
+
+    for (const tool of visibleTools) {
       registeredNames.add(tool.name);
 
       const schema = this.stripEnvVarParams(
@@ -1675,6 +1714,47 @@ export class McpEndpointController {
           ) as unknown as ToolHandle;
         },
       });
+    }
+
+    // Code mode: let the agent run a script next to the data instead of pulling
+    // every row through the model. Only where the caller supplied the owning
+    // organization (the authenticated per-server surface), never on the demo.
+    if (
+      this.sandbox &&
+      this.sandboxScripts &&
+      params.sandboxOrganizationId &&
+      isSandboxEnabled() &&
+      invocationContext.mcpServerId &&
+      !registeredNames.has(SANDBOX_RUN_TOOL)
+    ) {
+      const sandboxEntries = buildSandboxToolEntries(
+        {
+          sandbox: this.sandbox,
+          scripts: this.sandboxScripts,
+          executeTool: this.toolExecutor.executeTool.bind(this.toolExecutor),
+        },
+        {
+          storageOrganizationId: params.sandboxOrganizationId,
+          invocationContext,
+          // Decided again for every run: a stateful session keeps the plan it
+          // was created with, and a role may have changed since.
+          reauthorize: () =>
+            this.currentSandboxTools(
+              invocationContext.mcpServerId,
+              params.sandboxOrganizationId as string,
+              invocationContext.userId,
+            ),
+        },
+        // Exactly what a script may call: the tools that survived every filter above.
+        toSandboxTools(visibleTools),
+      );
+      // A connector that happens to use one of these names keeps it: a duplicate
+      // registration would make the SDK throw and fail the whole request.
+      for (const entry of sandboxEntries) {
+        if (registeredNames.has(entry.name)) continue;
+        registeredNames.add(entry.name);
+        entries.push(entry);
+      }
     }
 
     // Inject the org-level Knowledge Graph helper tool. Lets the agent ask

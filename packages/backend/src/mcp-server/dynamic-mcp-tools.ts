@@ -223,6 +223,8 @@ export class DynamicMcpTools {
       intent?: string;
       /** Script reads must always execute and audit in their own caller scope. */
       skipCache?: boolean;
+      /** Set when the call is made by a sandbox script: ties the audit row to that run. */
+      sandboxRunId?: string;
     },
   ): Promise<{
     content: ToolResultContent;
@@ -497,6 +499,7 @@ export class DynamicMcpTools {
           apiKeyName: context.apiKeyName,
           userEmail: context.userEmail,
           mcpServerName: context.mcpServerName,
+          sandboxRunId: context.sandboxRunId,
         }) : undefined,
       });
 
@@ -571,6 +574,7 @@ export class DynamicMcpTools {
           apiKeyName: context.apiKeyName,
           userEmail: context.userEmail,
           mcpServerName: context.mcpServerName,
+          sandboxRunId: context.sandboxRunId,
         }) : undefined,
       });
 
@@ -876,6 +880,7 @@ export class DynamicMcpTools {
           body: await this.databaseEngine.execute(config, endpointMapping, params, {
             readOnly,
             deniedTables: connectorConfig?.deniedTables,
+            maxRows: connectorConfig?.maxRows,
           }),
         };
       }

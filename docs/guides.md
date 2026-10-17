@@ -41,6 +41,7 @@ Per-adapter setup guides (English, German, Italian and more) live at **[anything
 | [Tool definition format](tool-definition.md) | Parameters, endpoint mapping, response mapping |
 | [Knowledge Graph &amp; AI skills](knowledge-graph.md) | Per-workspace data-relationship map served over MCP, plus AI skills composed into server instructions |
 | [MCP resources](mcp-resources.md) | Read-only resources on per-server endpoints: URIs, role visibility, fail-closed rules |
+| [Sandbox code mode](sandbox-code-mode.md) | Agent-written scripts that run next to the data and return only the answer: tools, limits, saved scripts |
 | [Deployment guide](deployment.md) | Docker, production setup, reverse proxy, env vars |
 | [Authentication](deployment.md#authentication) | OAuth2, JWT, API keys, MCP auth modes |
 | [Single sign-on](sso.md) | Entra ID, Google, Okta &amp; OIDC; role sync from directory groups; recovery codes — **self-hosted only** |

@@ -62,6 +62,7 @@
     "helmet": "^8.3.0",
     "https-proxy-agent": "^7.0.6",
     "ioredis": "^5.11.1",
+    "isolated-vm": "^7.0.1",
     "js-yaml": "^4.3.2",
     "mongodb": "^7.7.0",
     "mssql": "^12.7.2",

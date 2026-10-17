@@ -20,6 +20,7 @@ import { SettingsModule } from './settings/settings.module';
 import { RolesModule } from './roles/roles.module';
 import { KgModule } from './knowledge-graph/kg.module';
 import { McpServersModule } from './mcp-servers/mcp-servers.module';
+import { SandboxApiModule } from './sandbox/sandbox-api.module';
 import { LicenseModule } from './license/license.module';
 import { PrismaModule } from './common/prisma.module';
 import { RedisModule } from './common/redis.module';
@@ -172,6 +173,7 @@ if (useOAuth) {
     RolesModule,
     KgModule,
     McpServersModule,
+    SandboxApiModule,
     LicenseModule,
     LicensingModule,
 

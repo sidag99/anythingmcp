@@ -1,0 +1,104 @@
+{
+  "measuredAt": "runtime",
+  "asOf": "2026-10-15",
+  "runsPerMeasurement": 3,
+  "tokenNote": "estTokens = bytes / 4 (an estimate; no tokenizer was run)",
+  "results": [
+    {
+      "key": "q1",
+      "question": "How many orders were delayed last month, and what revenue did they carry?",
+      "conventional": {
+        "toolCalls": 1,
+        "bytesToModel": 196769,
+        "estTokens": 49193,
+        "wallMs": 54,
+        "fitsIn200kTokenWindow": true,
+        "dataSufficesForCorrectAnswer": true
+      },
+      "rawSql": {
+        "toolCalls": 1,
+        "bytesToModel": 104,
+        "estTokens": 26,
+        "wallMs": 38,
+        "correct": true
+      },
+      "sandbox": {
+        "ok": true,
+        "correct": true,
+        "mcpCalls": 1,
+        "connectorCalls": 1,
+        "bytesToModel": 354,
+        "estTokens": 89,
+        "bytesKeptInGateway": 1226373,
+        "serverMs": 53,
+        "wallMs": 84,
+        "error": null
+      },
+      "reductionBytesPct": 99.82
+    },
+    {
+      "key": "q2",
+      "question": "Revenue by product category for the last quarter",
+      "conventional": {
+        "toolCalls": 77,
+        "bytesToModel": 7666670,
+        "estTokens": 1916668,
+        "wallMs": 8621,
+        "fitsIn200kTokenWindow": false,
+        "dataSufficesForCorrectAnswer": true
+      },
+      "rawSql": {
+        "toolCalls": 1,
+        "bytesToModel": 605,
+        "estTokens": 152,
+        "wallMs": 101,
+        "correct": true
+      },
+      "sandbox": {
+        "ok": true,
+        "correct": true,
+        "mcpCalls": 1,
+        "connectorCalls": 2,
+        "bytesToModel": 535,
+        "estTokens": 134,
+        "bytesKeptInGateway": 4469445,
+        "serverMs": 377,
+        "wallMs": 417,
+        "error": null
+      },
+      "reductionBytesPct": 99.99
+    },
+    {
+      "key": "q3",
+      "question": "Top 10 customers by cumulative delay days this year",
+      "conventional": {
+        "toolCalls": 10,
+        "bytesToModel": 2194493,
+        "estTokens": 548624,
+        "wallMs": 878,
+        "fitsIn200kTokenWindow": false,
+        "dataSufficesForCorrectAnswer": true
+      },
+      "rawSql": {
+        "toolCalls": 1,
+        "bytesToModel": 1276,
+        "estTokens": 319,
+        "wallMs": 84,
+        "correct": true
+      },
+      "sandbox": {
+        "ok": true,
+        "correct": true,
+        "mcpCalls": 1,
+        "connectorCalls": 2,
+        "bytesToModel": 1145,
+        "estTokens": 287,
+        "bytesKeptInGateway": 11881208,
+        "serverMs": 568,
+        "wallMs": 546,
+        "error": null
+      },
+      "reductionBytesPct": 99.95
+    }
+  ]
+}

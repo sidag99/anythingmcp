@@ -17,7 +17,13 @@ import { renderStaticResponse } from '../static-response.util';
 @Injectable()
 export class DatabaseEngine {
   private readonly logger = new Logger(DatabaseEngine.name);
+  /** Rows a query returns unless the connector sets `config.maxRows`. */
   private readonly MAX_ROWS = 1000;
+  /**
+   * The most a connector may ask for with `config.maxRows`. A hard ceiling, so a
+   * typo cannot turn one tool call into an unbounded payload.
+   */
+  private readonly MAX_ROWS_CEILING = 250_000;
   // Upper bound on an incoming SQL string. The query is untrusted; capping its
   // length bounds the read-only lexical scan below (no unbounded work on a
   // hostile, oversized payload). 100k chars is far beyond any real analytics query.
@@ -43,10 +49,11 @@ export class DatabaseEngine {
       topicParam?: string;
     },
     params: Record<string, unknown>,
-    options?: { readOnly?: boolean; deniedTables?: unknown },
+    options?: { readOnly?: boolean; deniedTables?: unknown; maxRows?: unknown },
   ): Promise<unknown> {
     const readOnly = options?.readOnly !== false; // default true
     const deniedTables = normalizeDeniedTables(options?.deniedTables);
+    const maxRows = this.resolveMaxRows(options?.maxRows);
     // Static response tools (e.g. example queries) — return text without DB execution
     if (
       endpointMapping.method === 'static' &&
@@ -82,7 +89,7 @@ export class DatabaseEngine {
         this.validateQuery(sql);
       }
       this.assertNoDeniedTables(sql, deniedTables);
-      return this.dispatch(config, sql, [], readOnly);
+      return this.dispatch(config, sql, [], readOnly, maxRows);
     }
 
     // Templated SQL: compile ${name} / $name placeholders to driver-specific
@@ -97,7 +104,7 @@ export class DatabaseEngine {
       this.validateQuery(sql);
     }
     this.assertNoDeniedTables(sql, deniedTables);
-    return this.dispatch(config, sql, values, readOnly);
+    return this.dispatch(config, sql, values, readOnly, maxRows);
   }
 
   /**
@@ -148,25 +155,26 @@ export class DatabaseEngine {
     sql: string,
     values: unknown[],
     readOnly: boolean,
+    maxRows: number,
   ): Promise<unknown> {
     if (this.isHana(config.baseUrl)) {
-      return this.executeHana(config, sql, values, readOnly);
+      return this.executeHana(config, sql, values, readOnly, maxRows);
     }
     if (this.isMssql(config.baseUrl)) {
-      return this.executeMssql(config, sql, values);
+      return this.executeMssql(config, sql, values, maxRows);
     }
     if (this.isMysql(config.baseUrl)) {
-      return this.executeMysql(config, sql, values);
+      return this.executeMysql(config, sql, values, maxRows);
     }
     if (this.isOracle(config.baseUrl)) {
-      return this.executeOracle(config, sql, values);
+      return this.executeOracle(config, sql, values, maxRows);
     }
     if (this.isSqlite(config.baseUrl)) {
       return Promise.resolve(
-        this.executeSqlite(config.baseUrl, sql, values, readOnly),
+        this.executeSqlite(config.baseUrl, sql, values, readOnly, maxRows),
       );
     }
-    return this.executePostgres(config, sql, values);
+    return this.executePostgres(config, sql, values, maxRows);
   }
 
   /** Test connectivity — runs SELECT 1 (SQL) or ping (MongoDB) */
@@ -245,6 +253,7 @@ export class DatabaseEngine {
     config: { baseUrl: string; authConfig?: Record<string, unknown> },
     sql: string,
     values: unknown[] = [],
+    maxRows = this.MAX_ROWS,
   ): Promise<unknown> {
     const connectionString = this.withUrlCredentials(
       config.baseUrl,
@@ -263,7 +272,7 @@ export class DatabaseEngine {
         values.length > 0 ? await pool.query(sql, values) : await pool.query(sql);
       if (result.rows && result.rows.length > 0) {
         const rows = Array.isArray(result.rows) ? result.rows : [result.rows];
-        return this.truncateRows(rows);
+        return this.truncateRows(rows, maxRows);
       }
       // Write operations return rowCount instead of rows
       return { rowCount: result.rowCount, command: result.command };
@@ -284,6 +293,7 @@ export class DatabaseEngine {
     },
     sql: string,
     values: unknown[] = [],
+    maxRows = this.MAX_ROWS,
   ): Promise<unknown> {
     const mssqlConfig = this.buildMssqlConfig(config);
     this.logger.debug(`MSSQL query → ${mssqlConfig.server}/${mssqlConfig.database}`);
@@ -296,7 +306,7 @@ export class DatabaseEngine {
       });
       const result = await request.query(sql);
       if (result.recordset && result.recordset.length > 0) {
-        return this.truncateRows(result.recordset);
+        return this.truncateRows(result.recordset, maxRows);
       }
       // Write operations return rowsAffected
       return { rowsAffected: result.rowsAffected?.[0] ?? 0 };
@@ -537,6 +547,7 @@ export class DatabaseEngine {
     },
     sql: string,
     values: unknown[] = [],
+    maxRows = this.MAX_ROWS,
   ): Promise<unknown> {
     const uri = this.mysqlUri(config.baseUrl, config.authConfig);
     this.logger.debug(`MySQL query → ${new URL(uri).hostname}`);
@@ -551,7 +562,7 @@ export class DatabaseEngine {
           ? await conn.execute({ sql, timeout: this.STATEMENT_TIMEOUT_MS }, values as any[])
           : await conn.query({ sql, timeout: this.STATEMENT_TIMEOUT_MS });
       if (Array.isArray(result)) {
-        return this.truncateRows(result as Record<string, unknown>[]);
+        return this.truncateRows(result as Record<string, unknown>[], maxRows);
       }
       // Write operations return OkPacket
       const info = result as any;
@@ -587,6 +598,7 @@ export class DatabaseEngine {
     },
     sql: string,
     values: unknown[] = [],
+    maxRows = this.MAX_ROWS,
   ): Promise<unknown> {
     const oraConfig = this.buildOracleConfig(config);
     this.logger.debug(`Oracle query → ${oraConfig.connectString}`);
@@ -600,7 +612,7 @@ export class DatabaseEngine {
         autoCommit: true,
       });
       if (result.rows && result.rows.length > 0) {
-        return this.truncateRows(result.rows as Record<string, unknown>[]);
+        return this.truncateRows(result.rows as Record<string, unknown>[], maxRows);
       }
       // Write operations return rowsAffected
       return { rowsAffected: result.rowsAffected ?? 0 };
@@ -661,6 +673,7 @@ export class DatabaseEngine {
     sql: string,
     values: unknown[] = [],
     readOnly = true,
+    maxRows = this.MAX_ROWS,
   ): Promise<unknown> {
     const hana = this.buildHanaConfig(config);
     this.logger.debug(
@@ -679,7 +692,7 @@ export class DatabaseEngine {
         if (hana.sapClient) {
           await session.run(`SET 'CDS_CLIENT' = '${hana.sapClient}'`);
         }
-        return session.query(sql, values, this.MAX_ROWS);
+        return session.query(sql, values, maxRows);
       })();
       const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(
@@ -701,8 +714,8 @@ export class DatabaseEngine {
         return {
           rows: result.rows,
           truncated: true,
-          totalRows: `more than ${this.MAX_ROWS}`,
-          message: `Results truncated to ${this.MAX_ROWS} rows`,
+          totalRows: `more than ${maxRows}`,
+          message: `Results truncated to ${maxRows} rows`,
         };
       }
       return { rows: result.rows, totalRows: result.rows.length };
@@ -796,6 +809,7 @@ export class DatabaseEngine {
     sql: string,
     values: unknown[] = [],
     readOnly = true,
+    maxRows = this.MAX_ROWS,
   ): unknown {
     const filePath = this.sqlitePath(baseUrl);
     this.logger.debug(`SQLite query → ${filePath}`);
@@ -804,8 +818,18 @@ export class DatabaseEngine {
     try {
       const stmt = db.prepare(sql);
       if (stmt.reader) {
-        const rows = stmt.all(...(values as any[])) as Record<string, unknown>[];
-        return this.truncateRows(rows);
+        // Stream the result instead of loading it: at most `maxRows` rows are
+        // kept, however many the statement yields. The rest are only counted, so
+        // the caller still learns the real total, as with the other drivers.
+        const rows: Record<string, unknown>[] = [];
+        let total = 0;
+        for (const row of stmt.iterate(...(values as any[])) as Iterable<Record<string, unknown>>) {
+          total++;
+          if (rows.length < maxRows) rows.push(row);
+        }
+        return total > maxRows
+          ? { rows, truncated: true, totalRows: total, message: `Results truncated to ${maxRows} rows` }
+          : { rows, totalRows: total };
       }
       // Write statement (INSERT, UPDATE, DELETE, etc.)
       const info = stmt.run(...(values as any[]));
@@ -899,13 +923,24 @@ export class DatabaseEngine {
     return baseUrl.startsWith('sqlite://') || baseUrl.startsWith('sqlite:');
   }
 
-  private truncateRows(rows: Record<string, unknown>[]): unknown {
-    if (rows.length > this.MAX_ROWS) {
+  /**
+   * The row cap for one call: the connector's `config.maxRows` when it is a
+   * positive whole number, never above the ceiling, else the default.
+   */
+  private resolveMaxRows(value: unknown): number {
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+      return Math.min(value, this.MAX_ROWS_CEILING);
+    }
+    return this.MAX_ROWS;
+  }
+
+  private truncateRows(rows: Record<string, unknown>[], maxRows = this.MAX_ROWS): unknown {
+    if (rows.length > maxRows) {
       return {
-        rows: rows.slice(0, this.MAX_ROWS),
+        rows: rows.slice(0, maxRows),
         truncated: true,
         totalRows: rows.length,
-        message: `Results truncated to ${this.MAX_ROWS} rows`,
+        message: `Results truncated to ${maxRows} rows`,
       };
     }
     return { rows, totalRows: rows.length };

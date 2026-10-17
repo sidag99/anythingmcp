@@ -54,6 +54,9 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     throw new ApiError(message, response.status, errorBody);
   }
 
+  // A 204 (a delete) has no body to parse.
+  if (response.status === 204) return undefined as T;
+
   return response.json();
 }
 
@@ -1537,6 +1540,49 @@ export interface SavedScriptSummary {
   description: string;
   mcpServerId: string;
   revision: number;
+}
+
+// ── Sandbox (code mode) ─────────────────────────────────────────────────────
+// Scripts an agent runs next to the data. See docs/sandbox-code-mode.md.
+
+export interface SandboxRunMeta {
+  ms: number;
+  connectorCalls: number;
+  /** Bytes pulled from connectors into the sandbox: what stayed in the gateway. */
+  bytesFromConnectors: number;
+  /** Bytes of the result: what went back to the model. */
+  bytesReturned: number;
+  logs: string[];
+  toolsCalled: string[];
+}
+
+export interface SandboxError {
+  code: string;
+  message: string;
+  hint?: string;
+  line?: number;
+  column?: number;
+}
+
+export interface SandboxRunResponse {
+  runId: string;
+  ok: boolean;
+  result?: unknown;
+  error?: SandboxError;
+  meta: SandboxRunMeta;
+  script?: { id: string; name: string; version: number; ownedByYou: boolean };
+}
+
+export interface SandboxScriptSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  version: number;
+  createdById: string | null;
+  ownedByYou: boolean;
+  lastRunAt: string | null;
+  lastRunOk: boolean | null;
+  lastRunMeta: { ms?: number; connectorCalls?: number; bytesFromConnectors?: number; bytesReturned?: number } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1577,4 +1623,84 @@ export const codebound = {
     request<{ runId: string; result: unknown; calls: number; durationMs: number }>(
       `/api/codebound/servers/${encodeURIComponent(serverId)}/run`, { method: 'POST', body, token },
     ),
+};
+
+export interface SandboxScript extends SandboxScriptSummary {
+  code: string;
+}
+
+export interface SandboxSyntax {
+  ok: boolean;
+  line?: number;
+  column?: number;
+  message?: string;
+}
+
+export interface SandboxRunRecord {
+  id: string;
+  scriptId: string | null;
+  userId: string | null;
+  code: string;
+  args: unknown;
+  ok: boolean;
+  errorCode: string | null;
+  errorMessage: string | null;
+  resultPreview: unknown;
+  meta: SandboxRunMeta;
+  createdAt: string;
+}
+
+export interface IsolationResult {
+  id: string;
+  name: string;
+  claim: string;
+  specRef: string;
+  expectedCode: string;
+  actualCode: string;
+  passed: boolean;
+  ms: number;
+  detail?: string;
+}
+
+export interface SandboxBenchmark {
+  runId?: string;
+  raw: { ok: boolean; bytes?: number; ms: number; estTokens?: number; error?: string };
+  script: null | {
+    ok: boolean;
+    bytes: number;
+    ms: number;
+    estTokens: number;
+    connectorCalls: number;
+    bytesFromConnectors: number;
+    result?: unknown;
+    error?: SandboxError;
+  };
+  reduction: null | { bytesPct: number; tokensPct: number };
+}
+
+export const sandbox = {
+  scripts: (serverId: string, token: string) =>
+    request<SandboxScriptSummary[]>(`/api/sandbox/servers/${serverId}/scripts`, { token }),
+  script: (id: string, token: string) =>
+    request<SandboxScript>(`/api/sandbox/scripts/${id}`, { token }),
+  createScript: (serverId: string, data: { name: string; code: string; description?: string }, token: string) =>
+    request<SandboxScript & { syntax: SandboxSyntax }>(`/api/sandbox/servers/${serverId}/scripts`, { method: 'POST', body: data, token }),
+  updateScript: (id: string, data: { code?: string; description?: string }, token: string) =>
+    request<SandboxScript & { syntax: SandboxSyntax }>(`/api/sandbox/scripts/${id}`, { method: 'PATCH', body: data, token }),
+  deleteScript: (id: string, token: string) =>
+    request<void>(`/api/sandbox/scripts/${id}`, { method: 'DELETE', token }),
+  run: (
+    serverId: string,
+    data: { code?: string; scriptId?: string; args?: Record<string, unknown>; timeoutMs?: number },
+    token: string,
+  ) => request<SandboxRunResponse>(`/api/sandbox/servers/${serverId}/run`, { method: 'POST', body: data, token }),
+  runs: (serverId: string, token: string, limit = 50) =>
+    request<SandboxRunRecord[]>(`/api/sandbox/servers/${serverId}/runs?limit=${limit}`, { token }),
+  isolationTests: (serverId: string, token: string) =>
+    request<IsolationResult[]>(`/api/sandbox/servers/${serverId}/isolation-tests`, { method: 'POST', token }),
+  benchmark: (
+    serverId: string,
+    data: { toolName: string; toolArgs?: Record<string, unknown>; code: string; args?: Record<string, unknown> },
+    token: string,
+  ) => request<SandboxBenchmark>(`/api/sandbox/servers/${serverId}/benchmark`, { method: 'POST', body: data, token }),
 };

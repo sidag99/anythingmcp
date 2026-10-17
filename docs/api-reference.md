@@ -224,6 +224,26 @@ See [Tool Definition Format](tool-definition.md) for the full schema.
 
 ---
 
+## Sandbox (Code Mode) Endpoints
+
+Scripts an agent runs next to the data. All routes are under `/api/sandbox`, use the
+dashboard JWT, and are scoped to the caller's organization. Details, roles and limits:
+[Sandbox code mode](sandbox-code-mode.md#dashboard-and-rest-api).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/sandbox/servers/:serverId/run` | Run `code` or a saved `scriptId` (exactly one), optional `args`, `timeoutMs` |
+| GET | `/api/sandbox/servers/:serverId/scripts` | List saved scripts (`includeCode=1` to include code) |
+| POST | `/api/sandbox/servers/:serverId/scripts` | Save a script |
+| GET | `/api/sandbox/scripts/:scriptId` | Read a script |
+| PATCH | `/api/sandbox/scripts/:scriptId` | Edit a script (author only) |
+| DELETE | `/api/sandbox/scripts/:scriptId` | Delete a script (author or admin) |
+| GET | `/api/sandbox/servers/:serverId/runs` | Recent runs (all for admins, own for others) |
+| POST | `/api/sandbox/servers/:serverId/isolation-tests` | Run the live isolation test suite |
+| POST | `/api/sandbox/servers/:serverId/benchmark` | One raw read-only tool call against a script that answers the same question |
+
+---
+
 ## Audit Endpoints
 
 | Method | Endpoint | Description |

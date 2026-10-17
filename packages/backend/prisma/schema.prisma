@@ -47,6 +47,8 @@ model Organization {
   userRoleAssignments UserRoleAssignment[]
   identityProviders   IdentityProvider[]
   mcpConnectionGrants McpConnectionGrant[]
+  sandboxScripts      SandboxScript[]
+  sandboxRuns         SandboxRun[]
 
   @@map("organizations")
 }
@@ -602,6 +604,8 @@ model McpServerConfig {
   toolInvocations ToolInvocation[]
   kgSkills        KgSkillSuggestion[]
   codeboundScripts CodeboundScript[]
+  sandboxScripts  SandboxScript[]
+  sandboxRuns     SandboxRun[]
 
   @@unique([id, organizationId])
   @@unique([organizationId, slug])
@@ -1417,4 +1421,66 @@ model KgValueSeen {
   @@index([organizationId, valueHash])
   @@index([seenAt])
   @@map("kg_value_seen")
+}
+
+// ── Sandbox (code mode) ─────────────────────────────────────────────────────
+// Agent-written scripts that run in the gateway's isolated V8 sandbox next to
+// the connectors. Scripts belong to one MCP server (the tool set a script can
+// call is that server's); every row carries organization_id for tenant scoping.
+
+model SandboxScript {
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mcpServerId    String          @map("mcp_server_id")
+  mcpServer      McpServerConfig @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  createdById    String?         @map("created_by_id")
+
+  name        String
+  description String? @db.Text
+  code        String  @db.Text
+  version     Int     @default(1)
+
+  lastRunAt   DateTime? @map("last_run_at")
+  lastRunOk   Boolean?  @map("last_run_ok")
+  lastRunMeta Json?     @map("last_run_meta")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  runs SandboxRun[]
+
+  @@unique([mcpServerId, name])
+  @@index([organizationId])
+  @@map("sandbox_scripts")
+}
+
+// One execution of a script, saved or inline. The code is snapshotted so a run
+// stays explainable after the script is edited or deleted.
+model SandboxRun {
+  id             String          @id @default(cuid())
+  organizationId String          @map("organization_id")
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  mcpServerId    String          @map("mcp_server_id")
+  mcpServer      McpServerConfig @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  scriptId       String?         @map("script_id")
+  script         SandboxScript?  @relation(fields: [scriptId], references: [id], onDelete: SetNull)
+  userId         String?         @map("user_id")
+
+  code String @db.Text
+  args Json?
+
+  ok           Boolean
+  errorCode    String? @map("error_code")
+  errorMessage String? @map("error_message") @db.Text
+  // Bounded to 16 KB, like the tool-invocation audit output.
+  resultPreview Json?  @map("result_preview")
+  // SandboxRunResult.meta: ms, connectorCalls, bytesFromConnectors, bytesReturned, logs, toolsCalled
+  meta          Json
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([organizationId, createdAt])
+  @@index([mcpServerId, createdAt])
+  @@map("sandbox_runs")
 }

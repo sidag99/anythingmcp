@@ -34,7 +34,7 @@ For the current shipped state, see the [latest release](https://github.com/HelpC
 ## Out of scope (for now)
 
 - Building our own LLM client
-- Code-execution sandbox (use [E2B](https://e2b.dev) or similar instead)
+- A general-purpose code-execution sandbox (use [E2B](https://e2b.dev) or similar instead). [Sandbox code mode](sandbox-code-mode.md) only runs short scripts that call the MCP server's own tools, with no network, filesystem or secrets
 - Replacing Postman/Insomnia as a general API client
 
 ---

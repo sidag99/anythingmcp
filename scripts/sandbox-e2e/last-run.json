@@ -1,0 +1,852 @@
+[
+  {
+    "group": "core",
+    "name": "aggregates 3,000 orders in the sandbox and returns only the answer (REST)",
+    "pass": true,
+    "detail": {
+      "result": {
+        "total": 3000,
+        "delayed": 750,
+        "revenueDelayed": 191510,
+        "perCarrier": {
+          "GLS": 750
+        }
+      },
+      "meta": {
+        "ms": 47,
+        "connectorCalls": 1,
+        "bytesFromConnectors": 633206,
+        "bytesReturned": 77,
+        "toolsCalled": [
+          "shop_list_orders"
+        ]
+      }
+    },
+    "ms": 107
+  },
+  {
+    "group": "core",
+    "name": "the same through the MCP endpoint, as an agent calls it (JSON-RPC)",
+    "pass": true,
+    "detail": {
+      "tools": [
+        "shop_list_orders",
+        "shop_create_refund",
+        "shop_echo",
+        "shop_hang",
+        "shop_export_big",
+        "shop_echo_env",
+        "sandbox_run_script",
+        "sandbox_create_script",
+        "sandbox_edit_script",
+        "sandbox_list_scripts",
+        "kg_how_to_obtain"
+      ],
+      "bytesReturned": 77,
+      "bytesFromConnectors": 633206
+    },
+    "ms": 111
+  },
+  {
+    "group": "core",
+    "name": "benchmark: raw tool call vs script, same question (REST)",
+    "pass": true,
+    "detail": {
+      "raw": {
+        "ok": true,
+        "bytes": 777207,
+        "ms": 34,
+        "estTokens": 194302
+      },
+      "script": {
+        "ok": true,
+        "bytes": 77,
+        "ms": 49,
+        "estTokens": 20,
+        "connectorCalls": 1,
+        "bytesFromConnectors": 633206
+      },
+      "reduction": {
+        "bytesPct": 99.99,
+        "tokensPct": 99.99
+      }
+    },
+    "ms": 131
+  },
+  {
+    "group": "scripts",
+    "name": "create, list (no code), read, run by id, edit, run again, delete (REST)",
+    "pass": true,
+    "detail": {
+      "scriptId": "cmvc2c10600gg2s7dev5ozxwb",
+      "versionAfterEdits": 3
+    },
+    "ms": 203
+  },
+  {
+    "group": "scripts",
+    "name": "create, edit and run by name through MCP tools",
+    "pass": true,
+    "detail": {
+      "names": [
+        "delayed_orders",
+        "mcp_script"
+      ]
+    },
+    "ms": 178
+  },
+  {
+    "group": "read-only",
+    "name": "a script cannot call a write tool; the upstream never receives the request",
+    "pass": true,
+    "detail": {
+      "error": {
+        "code": "WRITE_NOT_ALLOWED",
+        "message": "Tool 'shop_create_refund' can change data, and sandbox scripts are read-only. (line 1)",
+        "hint": "Sandbox scripts are read-only. Use the data tool directly if the user asked for a change.",
+        "stack": "at line 1, column 8"
+      },
+      "upstreamRefundRequests": 0
+    },
+    "ms": 323
+  },
+  {
+    "group": "read-only",
+    "name": "the script is not even told the write tool exists",
+    "pass": true,
+    "detail": {
+      "list": [
+        "shop_list_orders",
+        "shop_echo",
+        "shop_hang",
+        "shop_export_big",
+        "shop_echo_env"
+      ],
+      "has": false
+    },
+    "ms": 22
+  },
+  {
+    "group": "read-only",
+    "name": "the request has no field that grants writes (extra fields are rejected)",
+    "pass": true,
+    "detail": {
+      "status": 400,
+      "message": [
+        "property allowWrites should not exist"
+      ]
+    },
+    "ms": 8
+  },
+  {
+    "group": "read-only",
+    "name": "benchmark refuses to call a write tool for real",
+    "pass": true,
+    "detail": null,
+    "ms": 12
+  },
+  {
+    "group": "read-only",
+    "name": "outside the sandbox the same tool still works for an admin (the policy is about scripts)",
+    "pass": true,
+    "detail": null,
+    "ms": 29
+  },
+  {
+    "group": "isolation",
+    "name": "the live isolation suite passes on the running server",
+    "pass": true,
+    "detail": {
+      "cases": 20,
+      "passed": 20,
+      "slowestMs": 1003
+    },
+    "ms": 3578
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: fetch",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 21
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: XMLHttpRequest",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 23
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: WebSocket",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 16
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: EventSource",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 15
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: require(\"fs\")",
+    "pass": true,
+    "detail": "blocked",
+    "ms": 19
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: process.env",
+    "pass": true,
+    "detail": "blocked",
+    "ms": 20
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: import(\"child_process\")",
+    "pass": true,
+    "detail": "blocked",
+    "ms": 21
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: import(\"node:fs\")",
+    "pass": true,
+    "detail": "blocked",
+    "ms": 14
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: constructor chain",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 15
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: eval(process)",
+    "pass": true,
+    "detail": "blocked",
+    "ms": 18
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: globalThis.process",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 17
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: Buffer / timers",
+    "pass": true,
+    "detail": "undefined,undefined,undefined,undefined,undefined",
+    "ms": 17
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: WebAssembly",
+    "pass": true,
+    "detail": "undefined",
+    "ms": 23
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: read /etc/passwd",
+    "pass": true,
+    "detail": "blocked",
+    "ms": 19
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: read env secrets",
+    "pass": true,
+    "detail": "undefined,undefined,undefined,undefined",
+    "ms": 16
+  },
+  {
+    "group": "isolation",
+    "name": "escape attempt: reach the bridge",
+    "pass": true,
+    "detail": "undefined,undefined,undefined,undefined,undefined",
+    "ms": 14
+  },
+  {
+    "group": "isolation",
+    "name": "a script that tries to write a host-side global does not affect the next run",
+    "pass": true,
+    "detail": null,
+    "ms": 34
+  },
+  {
+    "group": "limits",
+    "name": "infinite loop -> TIMEOUT",
+    "pass": true,
+    "detail": {
+      "ms": 1016,
+      "error": "TIMEOUT",
+      "bytesReturned": 0
+    },
+    "ms": 1016
+  },
+  {
+    "group": "limits",
+    "name": "loop after a connector call -> TIMEOUT",
+    "pass": true,
+    "detail": {
+      "ms": 1017,
+      "error": "TIMEOUT",
+      "bytesReturned": 0
+    },
+    "ms": 1017
+  },
+  {
+    "group": "limits",
+    "name": "memory bomb (array) -> MEMORY_LIMIT",
+    "pass": true,
+    "detail": {
+      "ms": 277,
+      "error": "MEMORY_LIMIT",
+      "bytesReturned": 0
+    },
+    "ms": 277
+  },
+  {
+    "group": "limits",
+    "name": "typed-array bomb -> MEMORY_LIMIT",
+    "pass": true,
+    "detail": {
+      "ms": 29,
+      "error": "MEMORY_LIMIT",
+      "bytesReturned": 0
+    },
+    "ms": 29
+  },
+  {
+    "group": "limits",
+    "name": "string bomb -> MEMORY_LIMIT",
+    "pass": true,
+    "detail": {
+      "ms": 18,
+      "error": "MEMORY_LIMIT",
+      "bytesReturned": 0
+    },
+    "ms": 18
+  },
+  {
+    "group": "limits",
+    "name": "oversize result -> OUTPUT_TOO_LARGE",
+    "pass": true,
+    "detail": {
+      "ms": 42,
+      "error": "OUTPUT_TOO_LARGE",
+      "bytesReturned": 0
+    },
+    "ms": 42
+  },
+  {
+    "group": "limits",
+    "name": "call-count limit -> CONNECTOR_CALL_LIMIT",
+    "pass": true,
+    "detail": {
+      "ms": 311,
+      "error": "CONNECTOR_CALL_LIMIT",
+      "bytesReturned": 0
+    },
+    "ms": 311
+  },
+  {
+    "group": "limits",
+    "name": "syntax error -> SYNTAX_ERROR",
+    "pass": true,
+    "detail": {
+      "ms": 16,
+      "error": "SYNTAX_ERROR",
+      "bytesReturned": 0
+    },
+    "ms": 16
+  },
+  {
+    "group": "limits",
+    "name": "runtime error -> RUNTIME_ERROR",
+    "pass": true,
+    "detail": {
+      "ms": 18,
+      "error": "RUNTIME_ERROR",
+      "bytesReturned": 0
+    },
+    "ms": 18
+  },
+  {
+    "group": "limits",
+    "name": "unknown tool -> TOOL_NOT_ALLOWED",
+    "pass": true,
+    "detail": {
+      "ms": 19,
+      "error": "TOOL_NOT_ALLOWED",
+      "bytesReturned": 0
+    },
+    "ms": 19
+  },
+  {
+    "group": "limits",
+    "name": "the oversize result was withheld: nothing from the 3,000 rows left the service",
+    "pass": true,
+    "detail": null,
+    "ms": 43
+  },
+  {
+    "group": "limits",
+    "name": "the host is healthy after the whole battery",
+    "pass": true,
+    "detail": {
+      "status": "up",
+      "usedMb": 185,
+      "limitMb": 8240,
+      "percent": 2.2,
+      "rssMb": 415
+    },
+    "ms": 10
+  },
+  {
+    "group": "limits",
+    "name": "concurrency: 7 simultaneous runs, the organization gets 4 slots, the rest are told BUSY (429)",
+    "pass": true,
+    "detail": {
+      "busy": 3,
+      "timeouts": 4
+    },
+    "ms": 2086
+  },
+  {
+    "group": "deadlines",
+    "name": "a connector that never answers: the call is abandoned at its own deadline (2 s here)",
+    "pass": true,
+    "detail": {
+      "ms": 2019,
+      "message": "Tool 'shop_hang' did not answer within 2000 ms. (line 1)"
+    },
+    "ms": 2019
+  },
+  {
+    "group": "deadlines",
+    "name": "the whole-run deadline wins when it is shorter than the call deadline",
+    "pass": true,
+    "detail": {
+      "ms": 1518
+    },
+    "ms": 1518
+  },
+  {
+    "group": "deadlines",
+    "name": "the script can catch a connector timeout and still answer",
+    "pass": true,
+    "detail": null,
+    "ms": 2022
+  },
+  {
+    "group": "deadlines",
+    "name": "cancelling the HTTP request stops the run (recorded as CANCELLED)",
+    "pass": true,
+    "detail": {
+      "recordedAfterMs": 721,
+      "meta": {
+        "ms": 597
+      }
+    },
+    "ms": 721
+  },
+  {
+    "group": "tenant",
+    "name": "customer B reads only customer B’s data, with the same tool name",
+    "pass": true,
+    "detail": {
+      "n": 5,
+      "ids": [
+        90000,
+        90001,
+        90002,
+        90003,
+        90004
+      ],
+      "customers": [
+        "customer-B-0",
+        "customer-B-1",
+        "customer-B-2",
+        "customer-B-3",
+        "customer-B-4"
+      ]
+    },
+    "ms": 29
+  },
+  {
+    "group": "tenant",
+    "name": "forged tenant identifiers in tool arguments change nothing (B still gets B’s rows)",
+    "pass": true,
+    "detail": {
+      "rows": 5
+    },
+    "ms": 30
+  },
+  {
+    "group": "tenant",
+    "name": "crafted resource/query arguments cannot reach customer A’s upstream",
+    "pass": true,
+    "detail": {
+      "upstreamAHitsCausedByB": 0,
+      "outcome": "ran"
+    },
+    "ms": 22
+  },
+  {
+    "group": "tenant",
+    "name": "B cannot call A’s other tools by name, nor see them",
+    "pass": true,
+    "detail": {
+      "list": [
+        "shop_list_orders"
+      ],
+      "shop_create_refund": "TOOL_NOT_ALLOWED",
+      "shop_echo": "TOOL_NOT_ALLOWED",
+      "shop_export_big": "TOOL_NOT_ALLOWED",
+      "shop_hang": "TOOL_NOT_ALLOWED"
+    },
+    "ms": 20
+  },
+  {
+    "group": "tenant",
+    "name": "B cannot use A’s server on any sandbox endpoint (404)",
+    "pass": true,
+    "detail": {
+      "run": 404,
+      "runs": 404,
+      "scripts": 404,
+      "create": 404,
+      "benchmark": 404,
+      "isolation": 404
+    },
+    "ms": 43
+  },
+  {
+    "group": "tenant",
+    "name": "B cannot read, change or delete A’s saved script by id (404)",
+    "pass": true,
+    "detail": {
+      "get": 404,
+      "patch": 404,
+      "delete": 404
+    },
+    "ms": 22
+  },
+  {
+    "group": "tenant",
+    "name": "B cannot reach A’s MCP endpoint, nor the sandbox tools on it",
+    "pass": true,
+    "detail": {
+      "status": 403
+    },
+    "ms": 18
+  },
+  {
+    "group": "tenant",
+    "name": "A cannot use B’s server either (404)",
+    "pass": true,
+    "detail": null,
+    "ms": 16
+  },
+  {
+    "group": "tenant",
+    "name": "run history of A and B are separate",
+    "pass": true,
+    "detail": {
+      "runsA": 176,
+      "runsB": 12
+    },
+    "ms": 23
+  },
+  {
+    "group": "tenant",
+    "name": "in the database every sandbox row carries the right organization",
+    "pass": true,
+    "detail": {
+      "runsOfB": "12"
+    },
+    "ms": 112
+  },
+  {
+    "group": "roles",
+    "name": "a role that allows one tool narrows what the editor’s script can call",
+    "pass": true,
+    "detail": {
+      "list": [
+        "shop_list_orders"
+      ],
+      "echo": "TOOL_NOT_ALLOWED",
+      "orders": 3
+    },
+    "ms": 30
+  },
+  {
+    "group": "roles",
+    "name": "the editor’s direct MCP tool list is narrowed the same way (sandbox == direct)",
+    "pass": true,
+    "detail": null,
+    "ms": 23
+  },
+  {
+    "group": "roles",
+    "name": "a saved script runs with the runner’s permissions, not the author’s",
+    "pass": true,
+    "detail": {
+      "error": "TOOL_NOT_ALLOWED",
+      "ownedByYou": false
+    },
+    "ms": 42
+  },
+  {
+    "group": "roles",
+    "name": "only the author edits a script: not the editor on the admin’s, not even the admin on the editor’s",
+    "pass": true,
+    "detail": {
+      "editorOnAdmins": 403,
+      "adminOnEditors": 403
+    },
+    "ms": 26
+  },
+  {
+    "group": "roles",
+    "name": "delete: the author or an admin, nobody else",
+    "pass": true,
+    "detail": {
+      "editorOnAdmins": 403,
+      "adminOnEditors": 204
+    },
+    "ms": 15
+  },
+  {
+    "group": "roles",
+    "name": "a viewer can read but not run, save, benchmark or run the suite",
+    "pass": true,
+    "detail": {
+      "list": 200,
+      "runs": 200,
+      "run": 403,
+      "create": 403,
+      "benchmark": 403,
+      "isolation": 403,
+      "patch": 403,
+      "delete": 403
+    },
+    "ms": 51
+  },
+  {
+    "group": "roles",
+    "name": "run history: a member sees only their own runs, an admin sees all",
+    "pass": true,
+    "detail": {
+      "editorSees": 6,
+      "adminSees": 178
+    },
+    "ms": 28
+  },
+  {
+    "group": "secrets",
+    "name": "a credential held as an environment variable is redacted, for a direct call and for a script alike",
+    "pass": true,
+    "detail": {
+      "authorizationSeenByScript": "Bearer [REDACTED]"
+    },
+    "ms": 59
+  },
+  {
+    "group": "secrets",
+    "name": "KNOWN GAP of the existing executor: a credential typed literally into authConfig is not redacted; the sandbox is no worse than a direct call",
+    "pass": true,
+    "detail": {
+      "directCallLeaks": true,
+      "sandboxLeaks": true,
+      "note": "executor redacts environment variables only (DynamicMcpTools.connectorSecretValues)"
+    },
+    "ms": 61
+  },
+  {
+    "group": "secrets",
+    "name": "the environment-variable credential appears nowhere in what the sandbox stored or audited",
+    "pass": true,
+    "detail": {
+      "envVarCredential": {
+        "sandboxRuns": "0",
+        "auditRows": "0"
+      },
+      "literalAuthConfigCredential_knownGap": {
+        "sandboxRuns": "4",
+        "auditRows": "8"
+      }
+    },
+    "ms": 207
+  },
+  {
+    "group": "secrets",
+    "name": "tools.describe shows the public shape only",
+    "pass": true,
+    "detail": null,
+    "ms": 22
+  },
+  {
+    "group": "audit",
+    "name": "REST run: the stored run and each connector call share the run id",
+    "pass": true,
+    "detail": {
+      "runId": "dab2f69c-91c1-48f5-b682-95ebd444ec89",
+      "auditRows": 2
+    },
+    "ms": 644
+  },
+  {
+    "group": "audit",
+    "name": "MCP run: the same link",
+    "pass": true,
+    "detail": {
+      "runId": "190fb274-b6c3-40b2-9449-8e7a53f6e853"
+    },
+    "ms": 610
+  },
+  {
+    "group": "audit",
+    "name": "an ordinary (non-sandbox) tool call carries no run id",
+    "pass": true,
+    "detail": null,
+    "ms": 484
+  },
+  {
+    "group": "audit",
+    "name": "each run row stores outcome, duration, error code and the caller",
+    "pass": true,
+    "detail": {
+      "sample": {
+        "id": "190fb274-b6c3-40b2-9449-8e7a53f6e853",
+        "ok": true,
+        "ms": 9,
+        "toolsCalled": [
+          "shop_list_orders"
+        ]
+      },
+      "counts": {
+        "ok": 114,
+        "TIMEOUT": 21,
+        "CANCELLED": 3
+      }
+    },
+    "ms": 14
+  },
+  {
+    "group": "big",
+    "name": "a 8 MB connector response, aggregated in the sandbox",
+    "pass": true,
+    "detail": {
+      "mb": 8,
+      "ms": 324,
+      "hostRssMbBefore": 419,
+      "hostRssMbAfter": 493,
+      "ok": true,
+      "result": {
+        "rows": 48490,
+        "delivered": 48490
+      },
+      "bytesFromConnectors": 8571621,
+      "bytesReturned": 32
+    },
+    "ms": 332
+  },
+  {
+    "group": "big",
+    "name": "a 16 MB connector response, aggregated in the sandbox",
+    "pass": true,
+    "detail": {
+      "mb": 16,
+      "ms": 679,
+      "hostRssMbBefore": 493,
+      "hostRssMbAfter": 592,
+      "ok": true,
+      "result": {
+        "rows": 96979,
+        "delivered": 96979
+      },
+      "bytesFromConnectors": 17154174,
+      "bytesReturned": 32
+    },
+    "ms": 688
+  },
+  {
+    "group": "big",
+    "name": "a 32 MB connector response, aggregated in the sandbox",
+    "pass": true,
+    "detail": {
+      "mb": 32,
+      "ms": 1326,
+      "hostRssMbBefore": 592,
+      "hostRssMbAfter": 782,
+      "ok": true,
+      "result": {
+        "rows": 193957,
+        "delivered": 193957
+      },
+      "bytesFromConnectors": 34413237,
+      "bytesReturned": 34
+    },
+    "ms": 1333
+  },
+  {
+    "group": "big",
+    "name": "a 44 MB connector response, aggregated in the sandbox",
+    "pass": true,
+    "detail": {
+      "mb": 44,
+      "ms": 1816,
+      "hostRssMbBefore": 782,
+      "hostRssMbAfter": 973,
+      "ok": true,
+      "result": {
+        "rows": 266690,
+        "delivered": 266690
+      },
+      "bytesFromConnectors": 47359711,
+      "bytesReturned": 34
+    },
+    "ms": 1825
+  },
+  {
+    "group": "big",
+    "name": "benchmark at 44 MB: raw tool call vs script, same question",
+    "pass": true,
+    "detail": {
+      "raw": {
+        "ok": true,
+        "bytes": 60160832,
+        "ms": 1232,
+        "estTokens": 15040208
+      },
+      "script": {
+        "ok": true,
+        "bytes": 34,
+        "ms": 2012,
+        "estTokens": 9,
+        "connectorCalls": 1,
+        "bytesFromConnectors": 47359711,
+        "result": {
+          "rows": 266690,
+          "delivered": 266690
+        }
+      },
+      "reduction": {
+        "bytesPct": 100,
+        "tokensPct": 100
+      }
+    },
+    "ms": 3277
+  }
+]

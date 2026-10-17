@@ -232,3 +232,20 @@ Every identifier is checked, not only table positions, so keep the patterns tabl
 
 A statement runs for at most 60 seconds on PostgreSQL, MySQL/MariaDB, Oracle and SAP HANA (SQL Server keeps its 30-second request timeout). On SAP HANA the limit is set per connector with `statementTimeout` on the connection string.
 
+## Row limit
+
+A SQL tool returns at most 1000 rows per call. When a query matched more, the result
+says `"truncated": true` and carries the real `totalRows`. To let one call return more
+(for example so a [code-mode](../sandbox-code-mode.md) script can aggregate a whole
+date range inside the gateway), set `maxRows` in the connector's configuration:
+
+```json
+{ "readOnly": true, "maxRows": 200000 }
+```
+
+The value must be a positive whole number and is capped at 250,000; anything else
+falls back to 1000. SQLite streams the result, so the memory held follows the cap. The
+other drivers hand the whole result to the backend, which then cuts it, so for a very
+large table also put a `LIMIT` or a date range in the SQL. Raise `maxRows` only on
+connectors whose results are meant to be processed in the gateway rather than handed
+to a model.

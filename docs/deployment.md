@@ -359,6 +359,9 @@ curl -s http://localhost:4000/api/mcp-api-keys \
 | `DOMAIN` | No | Domain for Caddy SSL certificate (e.g., `example.com`) |
 | `ACME_EMAIL` | No | Email for Let's Encrypt certificate notifications |
 | `APP_BIND_IP` | No | Bind IP for app ports (default: `0.0.0.0`, set `127.0.0.1` behind Caddy) |
+| `SANDBOX_ENABLED` | No | Set to `false` to stop offering [code mode](sandbox-code-mode.md) (default: on) |
+| `SANDBOX_ALLOW_WRITES` | No | Exactly `true` lets code-mode scripts call tools that change data (default: read-only) |
+| `SANDBOX_MEMORY_MB`, `SANDBOX_TIMEOUT_MS`, `SANDBOX_MAX_OUTPUT_BYTES`, `SANDBOX_MAX_CONNECTOR_CALLS`, `SANDBOX_MAX_CONNECTOR_BYTES`, `SANDBOX_MAX_CONNECTOR_RESPONSE_BYTES`, `SANDBOX_CONNECTOR_TIMEOUT_MS`, `SANDBOX_MAX_CONCURRENT` | No | Per-run limits of code mode; defaults and meaning in [Sandbox code mode](sandbox-code-mode.md#limits-and-configuration) |
 
 ---
 
