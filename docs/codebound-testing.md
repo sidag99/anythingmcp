@@ -274,6 +274,11 @@ Expect **76 passing tests** and the PostgreSQL tests skipped by default.
 Local HTTP fixture tests need permission to listen on localhost when run inside
 a restricted coding-agent sandbox.
 
+The allocation test requires an out-of-memory error and verifies that a fresh
+run succeeds afterward. Its 15-second Jest budget allows worker cleanup around
+the sandbox's unchanged 5-second execution limit; this applies equally to Cloud
+and self-hosted deployments.
+
 Include real PostgreSQL persistence, tenant isolation, concurrent writes, and
 foreign-key checks:
 
