@@ -1,4 +1,4 @@
-import { runSandbox } from './sandbox';
+import { RUN_TIMEOUT_MS, runSandbox } from './sandbox';
 
 describe('Codebound QuickJS sandbox', () => {
   const call = jest.fn(async () => ({
@@ -76,15 +76,20 @@ describe('Codebound QuickJS sandbox', () => {
     expect((await runSandbox('return 42;', {}, call)).result).toBe(42);
   });
 
-  it('stops excessive allocation', async () => {
-    await expect(
-      runSandbox(
-        'const a = []; while (true) a.push(new Array(100000).fill(1));',
-        {},
-        call,
-      ),
-    ).rejects.toThrow();
-  });
+  it(
+    'stops excessive allocation and permits the next run',
+    async () => {
+      // One allocation exceeds the 64 MiB heap without an unbounded GC loop.
+      // A time-limit or output-size rejection must not pass this memory test.
+      await expect(
+        runSandbox('return "x".repeat(128 * 1024 * 1024);', {}, call),
+      ).rejects.toThrow(/out of memory/i);
+      expect(call).not.toHaveBeenCalled();
+      expect((await runSandbox('return 42;', {}, call)).result).toBe(42);
+    },
+    // The sandbox deadline and worker cleanup must finish before Jest's timer.
+    2 * RUN_TIMEOUT_MS + 5000,
+  );
 
   it('limits tool calls even if the guest catches errors', async () => {
     await expect(
