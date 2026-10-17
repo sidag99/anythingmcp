@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>404</title>
+<style>
+  html,body{height:100%;margin:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+       color:#4b5563;background:#f3f4f6 url(/__void/void.jpg) center/cover no-repeat;display:flex;align-items:center;justify-content:center}
+  body::before{content:"";position:fixed;inset:0;background:rgba(243,244,246,.55);pointer-events:none}
+  main{position:relative;text-align:center;padding:2rem}
+  .mark{width:72px;height:72px;color:#6b7280;opacity:.85;filter:drop-shadow(0 1px 1px rgba(0,0,0,.05))}
+  h1{font-weight:500;font-size:1.5rem;letter-spacing:.02em;margin:1.25rem 0 .4rem;color:#374151}
+  p{margin:0;font-size:.95rem;color:#6b7280}
+  .go{margin-top:2rem;display:inline-flex;align-items:center;gap:.6rem;font-size:.9rem;color:#6b7280}
+  select{font:inherit;color:#374151;background:rgba(255,255,255,.7);border:1px solid #d1d5db;border-radius:8px;padding:.4rem 2rem .4rem .7rem;min-width:14rem;
+         appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' fill='none' stroke='%236b7280' stroke-width='1.5'/></svg>");background-repeat:no-repeat;background-position:right .7rem center}
+  select:focus{outline:2px solid #9ca3af;outline-offset:1px}
+  .code{position:fixed;bottom:1rem;left:0;right:0;text-align:center;font-size:.75rem;color:#9ca3af;letter-spacing:.3em}
+</style>
+</head>
+<body>
+<main>
+  <svg class="mark" viewBox="0 0 52 52" fill="none" aria-hidden="true">
+    <line x1="26" y1="26" x2="26" y2="9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.55"/>
+    <line x1="26" y1="26" x2="10" y2="40" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.55"/>
+    <line x1="26" y1="26" x2="42" y2="40" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" style="opacity:.55"/>
+    <circle cx="26" cy="9" r="5" fill="currentColor" style="opacity:.65"/>
+    <circle cx="10" cy="40" r="5" fill="currentColor" style="opacity:.65"/>
+    <circle cx="42" cy="40" r="5" fill="currentColor" style="opacity:.65"/>
+    <circle cx="26" cy="26" r="10" fill="currentColor"/>
+    <circle cx="26" cy="26" r="5.5" fill="#f3f4f6"/>
+  </svg>
+  <h1 id="title">You have reached the void</h1>
+  <p id="sub">This branch is not deployed here, or it has been cleaned up.</p>
+  <div class="go" id="go" hidden>
+    <label for="branch" id="label">Go to branch</label>
+    <select id="branch"><option value="">…</option></select>
+  </div>
+</main>
+<div class="code">404</div>
+<script>
+(function () {
+  var t = {
+    en: ['You have reached the void', 'This branch is not deployed here, or it has been cleaned up.', 'Go to branch', 'production'],
+    zh: ['你来到了虚空', '这个分支还没有部署，或者已经被清理了。', '前往 branch', '生产'],
+    de: ['Du bist in der Leere gelandet', 'Dieser Branch ist hier nicht deployt oder wurde bereits aufgeräumt.', 'Zum Branch', 'Produktion'],
+    ja: ['あなたは虚空に辿り着きました', 'このブランチはここにデプロイされていないか、すでに片付けられました。', 'ブランチへ移動', '本番']
+  };
+  var langs = navigator.languages || [navigator.language || 'en'];
+  var pick = 'en';
+  for (var i = 0; i < langs.length; i++) { var k = String(langs[i]).toLowerCase().slice(0, 2); if (t[k]) { pick = k; break; } }
+  var s = t[pick];
+  document.documentElement.lang = pick;
+  document.getElementById('title').textContent = s[0];
+  document.getElementById('sub').textContent = s[1];
+  document.getElementById('label').textContent = s[2];
+
+  fetch('/__previews/index.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (!d || !Array.isArray(d.entries) || !d.entries.length) return;
+    var sel = document.getElementById('branch');
+    var repos = [];
+    d.entries.forEach(function (e) { if (repos.indexOf(e.repo) < 0) repos.push(e.repo); });
+    repos.forEach(function (repo) {
+      var g = document.createElement('optgroup'); g.label = repo;
+      d.entries.filter(function (e) { return e.repo === repo; }).forEach(function (e) {
+        var o = document.createElement('option'); o.value = e.url;
+        o.textContent = e.branch + (e.production ? ' (' + s[3] + ')' : '');
+        g.appendChild(o);
+      });
+      sel.appendChild(g);
+    });
+    sel.addEventListener('change', function () { if (sel.value) location.assign(sel.value); });
+    document.getElementById('go').hidden = false;
+  }).catch(function () {});
+})();
+</script>
+</body>
+</html>

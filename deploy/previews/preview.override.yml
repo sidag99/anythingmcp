@@ -1,0 +1,28 @@
+x-logging: &rotated-logs
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "2"
+
+services:
+  app:
+    image: ${IMAGE_REPO:?IMAGE_REPO 未设置}:${APP_TAG:?APP_TAG 未设置}
+    ports: !reset []
+    networks: [default, amcp-previews]
+    mem_limit: 768m
+    memswap_limit: 768m
+    cpus: 0.5
+    logging: *rotated-logs
+    environment:
+      - NODE_MAX_OLD_SPACE_MB=${NODE_MAX_OLD_SPACE_MB:-512}
+      - PREVIEW_INDEX_URL=${PREVIEW_INDEX_URL:-}
+
+  postgres:
+    mem_limit: 256m
+    memswap_limit: 256m
+    cpus: 0.25
+    logging: *rotated-logs
+
+networks:
+  amcp-previews:
+    external: true

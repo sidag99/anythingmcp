@@ -1,0 +1,23 @@
+entryPoints:
+  web:
+    address: ":3100"
+    forwardedHeaders:
+      insecure: true
+    transport:
+      respondingTimeouts:
+        readTimeout: 300s
+        writeTimeout: 0s
+        idleTimeout: 180s
+
+providers:
+  file:
+    directory: /dynamic
+    watch: true
+
+api:
+  dashboard: false
+
+log:
+  level: INFO
+
+accessLog: {}

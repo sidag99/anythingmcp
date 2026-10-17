@@ -1,0 +1,21 @@
+http:
+  routers:
+    ${INSTANCE}-backend:
+      rule: "Host(`${HOST}`) && (PathRegexp(`^/(api|mcp|health|\\.well-known|auth|sso)(/|$)`) || PathRegexp(`^/(authorize|token|register|callback|revoke|userinfo)$`))"
+      priority: 50
+      entryPoints: [web]
+      service: ${INSTANCE}-backend
+    ${INSTANCE}-frontend:
+      rule: "Host(`${HOST}`)"
+      priority: 10
+      entryPoints: [web]
+      service: ${INSTANCE}-frontend
+  services:
+    ${INSTANCE}-backend:
+      loadBalancer:
+        servers:
+          - url: "http://${INSTANCE}-app:4000"
+    ${INSTANCE}-frontend:
+      loadBalancer:
+        servers:
+          - url: "http://${INSTANCE}-app:3000"

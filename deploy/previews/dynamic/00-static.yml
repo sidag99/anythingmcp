@@ -1,0 +1,22 @@
+http:
+  routers:
+    previews-index:
+      rule: "PathPrefix(`/__previews/`) || PathPrefix(`/__void/`)"
+      priority: 1000
+      entryPoints: [web]
+      service: previews-static
+    previews-home:
+      rule: "Host(`previews.flowerchatting.com`)"
+      priority: 100
+      entryPoints: [web]
+      service: previews-static
+    previews-void:
+      rule: "HostRegexp(`.+`)"
+      priority: 1
+      entryPoints: [web]
+      service: previews-static
+  services:
+    previews-static:
+      loadBalancer:
+        servers:
+          - url: "http://previews-static:80"

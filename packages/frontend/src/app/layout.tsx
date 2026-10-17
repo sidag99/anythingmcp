@@ -19,6 +19,7 @@ import { LicenseWall } from '@/components/license-wall';
 import { GoogleTagManager, GoogleTagManagerNoscript } from '@/components/google-tag-manager';
 import { CookieConsentBanner } from '@/components/cookie-consent';
 import { SentryConfig } from '@/components/sentry-config';
+import { BranchSwitcher } from '@/components/branch-switcher';
 import { TRANSLATION_SAFE_DOM_SCRIPT } from '@/lib/translation-safe-dom';
 
 export const metadata: Metadata = {
@@ -79,6 +80,7 @@ export default function RootLayout({
       <body>
         <GoogleTagManagerNoscript />
         <Providers>
+          <BranchSwitcher indexUrl={process.env.PREVIEW_INDEX_URL} />
           <LicenseWall />
           {children}
         </Providers>
